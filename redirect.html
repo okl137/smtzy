@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>正在跳转...</title>
+    <style>
+        :root {
+            --bg: #0e0e0e;
+            --accent: #1db954;
+            --glass: rgba(255,255,255,0.05);
+            --border: rgba(255,255,255,0.1);
+            --text: #ffffff;
+            --sub: rgba(255,255,255,0.6);
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .container {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            padding: 40px;
+            border-radius: 24px;
+            text-align: center;
+            max-width: 90%;
+            width: 320px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            animation: popIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            margin: 0 auto 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        h2 { margin: 0 0 12px; font-weight: 600; font-size: 20px; }
+        p { margin: 0; color: var(--sub); font-size: 14px; line-height: 1.5; }
+        
+        .wx-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 60px;
+            text-align: center;
+        }
+        .wx-tip {
+            color: #fff;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .wx-arrow {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='%23ffffff' stroke-width='4'%3E%3Cpath d='M10 50 Q 50 10 80 10 L 90 20 M 80 10 L 70 30' /%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            transform: rotate(-10deg);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="spinner"></div>
+        <h2 id="status">正在获取最新地址...</h2>
+        <p id="msg">请稍候，即将为您跳转到点歌台</p>
+    </div>
+
+    <div class="wx-overlay" id="wx-overlay">
+        <div class="wx-arrow"></div>
+        <div class="wx-tip">
+            <p>由于微信限制，无法直接打开</p>
+            <p>请点击右上角 <b>...</b></p>
+            <p>选择 <b>在浏览器打开</b></p>
+        </div>
+    </div>
+
+    <script>
+        const CONFIG_URL = './kiosk_url.txt'; // 指向存储链接的文本文件
+        
+        function isWeChat() {
+            return /MicroMessenger/i.test(navigator.userAgent);
+        }
+
+        async function init() {
+            if (isWeChat()) {
+                document.getElementById('wx-overlay').style.display = 'flex';
+                return;
+            }
+
+            try {
+                // 如果是本地直接打开 (file://)，fetch 会被跨域策略拦截，提示用户
+                if (window.location.protocol === 'file:') {
+                    throw new Error('Local file access blocked by browser security. Please run via a web server.');
+                }
+
+                // Add timestamp to prevent caching
+                const res = await fetch(CONFIG_URL + '?t=' + Date.now());
+                if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+                const text = await res.text();
+                const url = text.trim();
+                
+                if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+                    document.getElementById('status').textContent = '正在跳转...';
+                    setTimeout(() => {
+                        window.location.href = url;
+                    }, 500);
+                } else {
+                    throw new Error('Invalid URL in kiosk_url.txt');
+                }
+            } catch (e) {
+                document.getElementById('status').textContent = '跳转失败';
+                let errMsg = '无法获取最新地址，请联系管理员。';
+                
+                if (window.location.protocol === 'file:') {
+                    errMsg = '请勿直接双击打开 HTML 文件。<br>请将其部署到 GitHub Pages 或 Web 服务器上使用。<br>(浏览器禁止本地读取 txt 文件)';
+                } else {
+                     errMsg += `<br><span style="font-size:12px;opacity:0.5">${e.message}</span>`;
+                }
+
+                document.getElementById('msg').innerHTML = errMsg;
+                console.error(e);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
