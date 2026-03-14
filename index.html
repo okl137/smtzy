@@ -104,11 +104,29 @@
     </div>
 
     <script>
-        // 使用 jsDelivr 加速 GitHub 原始文件，避免 CORS 限制并提升国内访问速度
-        const CONFIG_URL = 'https://cdn.jsdelivr.net/gh/okl137/smtzy@main/kiosk_url.txt'; 
+        // 使用多个源进行重试，避免单一 CDN 挂掉
+        const CONFIG_URLS = [
+            'https://cdn.jsdelivr.net/gh/okl137/smtzy@main/kiosk_url.txt',
+            'https://raw.githubusercontent.com/okl137/smtzy/main/kiosk_url.txt'
+        ];
         
         function isWeChat() {
             return /MicroMessenger/i.test(navigator.userAgent);
+        }
+
+        async function fetchWithRetry(urls) {
+            let lastError;
+            for (const url of urls) {
+                try {
+                    const res = await fetch(url + '?t=' + Date.now());
+                    if (res.ok) return await res.text();
+                    lastError = new Error(`HTTP ${res.status} from ${url}`);
+                } catch (e) {
+                    lastError = e;
+                    console.warn(`Failed to fetch from ${url}:`, e);
+                }
+            }
+            throw lastError;
         }
 
         async function init() {
@@ -118,11 +136,8 @@
             }
 
             try {
-                // Add timestamp to prevent caching
-                const res = await fetch(CONFIG_URL + '?t=' + Date.now());
-                if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-                const text = await res.text();
-                const url = text.trim();
+                const text = await fetchWithRetry(CONFIG_URLS);
+                const url = text ? text.trim() : '';
                 
                 if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
                     document.getElementById('status').textContent = '正在跳转...';
