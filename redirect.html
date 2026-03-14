@@ -104,7 +104,8 @@
     </div>
 
     <script>
-        const CONFIG_URL = './kiosk_url.txt'; // 指向存储链接的文本文件
+        // 使用 jsDelivr 加速 GitHub 原始文件，避免 CORS 限制并提升国内访问速度
+        const CONFIG_URL = 'https://cdn.jsdelivr.net/gh/okl137/smtzy@main/kiosk_url.txt'; 
         
         function isWeChat() {
             return /MicroMessenger/i.test(navigator.userAgent);
@@ -117,11 +118,6 @@
             }
 
             try {
-                // 如果是本地直接打开 (file://)，fetch 会被跨域策略拦截，提示用户
-                if (window.location.protocol === 'file:') {
-                    throw new Error('Local file access blocked by browser security. Please run via a web server.');
-                }
-
                 // Add timestamp to prevent caching
                 const res = await fetch(CONFIG_URL + '?t=' + Date.now());
                 if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
@@ -134,17 +130,12 @@
                         window.location.href = url;
                     }, 500);
                 } else {
-                    throw new Error('Invalid URL in kiosk_url.txt');
+                    throw new Error('Invalid URL format in kiosk_url.txt');
                 }
             } catch (e) {
                 document.getElementById('status').textContent = '跳转失败';
                 let errMsg = '无法获取最新地址，请联系管理员。';
-                
-                if (window.location.protocol === 'file:') {
-                    errMsg = '请勿直接双击打开 HTML 文件。<br>请将其部署到 GitHub Pages 或 Web 服务器上使用。<br>(浏览器禁止本地读取 txt 文件)';
-                } else {
-                     errMsg += `<br><span style="font-size:12px;opacity:0.5">${e.message}</span>`;
-                }
+                errMsg += `<br><span style="font-size:12px;opacity:0.5">${e.message}</span>`;
 
                 document.getElementById('msg').innerHTML = errMsg;
                 console.error(e);
