@@ -104,8 +104,9 @@
     </div>
 
     <script>
-        // 使用多个源进行重试，避免单一 CDN 挂掉
+        // 配置源列表：优先使用同源相对路径（最稳），其次使用 jsDelivr CDN 加速，最后使用 GitHub 原始内容
         const CONFIG_URLS = [
+            './kiosk_url.txt', 
             'https://cdn.jsdelivr.net/gh/okl137/smtzy@main/kiosk_url.txt',
             'https://raw.githubusercontent.com/okl137/smtzy/main/kiosk_url.txt'
         ];
